@@ -66,32 +66,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 async function generatePdfFromHtml(htmlContent) {
     let executablePath = null;
-    console.log("🛠 Checking environment...");
 
-    if (process.env.NODE_ENV === 'production') {
-        const chromeDir = '/opt/render/project/puppeteer/chrome';
-        console.log("📂 Searching for Chrome in:", chromeDir);
-        
-        try {
-            if (fs.existsSync(chromeDir)) {
-                const folders = fs.readdirSync(chromeDir);
-                const linuxFolder = folders.find(f => f.startsWith('linux-'));
-                
-                if (linuxFolder) {
-                    executablePath = path.join(chromeDir, linuxFolder, 'chrome-linux64', 'chrome');
-                    console.log("🎯 Found Chrome Executable at:", executablePath);
-                } else {
-                    console.log("⚠️ No 'linux-' folder found in chrome directory.");
-                }
-            } else {
-                console.log("❌ Chrome directory does not exist yet.");
-            }
-        } catch (err) {
-            console.error("❌ FS Error:", err.message);
-        }
-    }
-
-    console.log("🚀 Attempting to launch browser...");
     const browser = await puppeteer.launch({
         executablePath: executablePath || null,
         args: [
@@ -104,26 +79,22 @@ async function generatePdfFromHtml(htmlContent) {
     });
 
     try {
-        console.log("✅ Browser launched successfully");
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
         
-        console.log("📄 Printing PDF...");
+        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
         const pdfBuffer = await page.pdf({ 
             format: "A4", 
-            printBackground: true 
+            printBackground: true,
+            margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" }
         });
-        
-        console.log("✨ PDF created successfully!");
+
         return pdfBuffer;
     } catch (error) {
-        console.error("❌ Inside generatePdfFromHtml Error:", error.message);
+        console.error("PDF Generation Error:", error.message);
         throw error;
     } finally {
-        if (browser) {
-            await browser.close();
-            console.log("🔒 Browser closed.");
-        }
+        if (browser) await browser.close();
     }
 }
 
