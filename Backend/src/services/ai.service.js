@@ -66,35 +66,34 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 async function generatePdfFromHtml(htmlContent) {
     let executablePath = null;
+    console.log("🛠 Checking environment...");
 
-    // Logic to find the Chromium executable dynamically on Render
     if (process.env.NODE_ENV === 'production') {
         const chromeDir = '/opt/render/project/puppeteer/chrome';
+        console.log("📂 Searching for Chrome in:", chromeDir);
         
         try {
             if (fs.existsSync(chromeDir)) {
                 const folders = fs.readdirSync(chromeDir);
-                // Look for the folder starting with 'linux-'
                 const linuxFolder = folders.find(f => f.startsWith('linux-'));
                 
                 if (linuxFolder) {
-                    executablePath = path.join(
-                        chromeDir, 
-                        linuxFolder, 
-                        'chrome-linux64', 
-                        'chrome'
-                    );
-                    console.log("🎯 Found Chrome at:", executablePath);
+                    executablePath = path.join(chromeDir, linuxFolder, 'chrome-linux64', 'chrome');
+                    console.log("🎯 Found Chrome Executable at:", executablePath);
+                } else {
+                    console.log("⚠️ No 'linux-' folder found in chrome directory.");
                 }
+            } else {
+                console.log("❌ Chrome directory does not exist yet.");
             }
         } catch (err) {
-            console.error("❌ Error finding Chrome path:", err);
+            console.error("❌ FS Error:", err.message);
         }
     }
 
-    // Launch with the discovered path (or null for local development)
+    console.log("🚀 Attempting to launch browser...");
     const browser = await puppeteer.launch({
-        executablePath: executablePath || process.env.PUPPETEER_EXECUTABLE_PATH || null,
+        executablePath: executablePath || null,
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
@@ -105,37 +104,28 @@ async function generatePdfFromHtml(htmlContent) {
     });
 
     try {
-        console.log("🚀 Puppeteer Browser Launched");
+        console.log("✅ Browser launched successfully");
         const page = await browser.newPage();
-
-        await page.setDefaultNavigationTimeout(60000);
-
-        // networkidle0 is good, but for faster generation, 
-        // sometimes 'domcontentloaded' is enough if you don't have external images
         await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-
-        const pdfBuffer = await page.pdf({
-            format: "A4",
-            printBackground: true, // Crucial for Tailwind colors/CSS backgrounds
-            margin: {
-                top: "10mm",
-                bottom: "10mm",
-                left: "10mm",
-                right: "10mm"
-            }
+        
+        console.log("📄 Printing PDF...");
+        const pdfBuffer = await page.pdf({ 
+            format: "A4", 
+            printBackground: true 
         });
-
-        console.log("📄 PDF Buffer created.");
+        
+        console.log("✨ PDF created successfully!");
         return pdfBuffer;
     } catch (error) {
-        console.error("❌ PDF Generation Error:", error);
+        console.error("❌ Inside generatePdfFromHtml Error:", error.message);
         throw error;
     } finally {
-        await browser.close();
-        console.log("🔒 Browser closed.");
+        if (browser) {
+            await browser.close();
+            console.log("🔒 Browser closed.");
+        }
     }
 }
-
 
 
 async function generateResumePdf({ resume, selfDescription, jobDescription}){
