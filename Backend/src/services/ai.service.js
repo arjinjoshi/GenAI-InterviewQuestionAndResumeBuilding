@@ -1,9 +1,9 @@
 const { createGoogleGenerativeAI } = require('@ai-sdk/google');
 const { generateText, Output } = require('ai') ;
 const { z } = require('zod');
-const puppeteer = require("puppeteer"); 
 const fs = require('fs');
-const path = require ('path');
+const path = require('path');
+const puppeteer = require('puppeteer');
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENAI_API_KEY, 
@@ -63,9 +63,6 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 }
 
-import fs from 'fs';
-import path from 'path';
-import puppeteer from 'puppeteer';
 
 async function generatePdfFromHtml(htmlContent) {
     let executablePath = null;
