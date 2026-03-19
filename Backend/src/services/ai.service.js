@@ -68,12 +68,15 @@ async function generatePdfFromHtml(htmlContent){
         args: [
           "--no-sandbox", 
           "--disable-setuid-sandbox",
-          "--single-process",
-          "--no-zygote"
+          "--disable-dev-shm-usage",
+          "--single-process"
         ],
       });
-    console.log(browser);
+    console.log("🚀 Puppeteer Browser Launched");
     const page = await browser.newPage();
+
+    await page.setDefaultNavigationTimeout(60000);
+
     await page.setContent(htmlContent, { waitUntil: "networkidle0" })
 
     const pdfBuffer = await page.pdf({ 
@@ -87,7 +90,7 @@ async function generatePdfFromHtml(htmlContent){
     })
 
     await browser.close()
-
+    console.log("📄 PDF Buffer created. Sending to client...");
     return pdfBuffer;
 }
 
