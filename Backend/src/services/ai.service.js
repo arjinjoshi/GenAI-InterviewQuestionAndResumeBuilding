@@ -2,6 +2,8 @@ const { createGoogleGenerativeAI } = require('@ai-sdk/google');
 const { generateText, Output } = require('ai') ;
 const { z } = require('zod');
 const puppeteer = require("puppeteer"); 
+const fs = require('fs');
+const path = require ('path');
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENAI_API_KEY, 
@@ -61,37 +63,80 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 }
 
-async function generatePdfFromHtml(htmlContent){
-    
+import fs from 'fs';
+import path from 'path';
+import puppeteer from 'puppeteer';
+
+async function generatePdfFromHtml(htmlContent) {
+    let executablePath = null;
+
+    // Logic to find the Chromium executable dynamically on Render
+    if (process.env.NODE_ENV === 'production') {
+        const chromeDir = '/opt/render/project/puppeteer/chrome';
+        
+        try {
+            if (fs.existsSync(chromeDir)) {
+                const folders = fs.readdirSync(chromeDir);
+                // Look for the folder starting with 'linux-'
+                const linuxFolder = folders.find(f => f.startsWith('linux-'));
+                
+                if (linuxFolder) {
+                    executablePath = path.join(
+                        chromeDir, 
+                        linuxFolder, 
+                        'chrome-linux64', 
+                        'chrome'
+                    );
+                    console.log("🎯 Found Chrome at:", executablePath);
+                }
+            }
+        } catch (err) {
+            console.error("❌ Error finding Chrome path:", err);
+        }
+    }
+
+    // Launch with the discovered path (or null for local development)
     const browser = await puppeteer.launch({
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
+        executablePath: executablePath || process.env.PUPPETEER_EXECUTABLE_PATH || null,
         args: [
-          "--no-sandbox", 
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--single-process"
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--single-process",
+            "--no-zygote"
         ],
-      });
-    console.log("🚀 Puppeteer Browser Launched");
-    const page = await browser.newPage();
+    });
 
-    await page.setDefaultNavigationTimeout(60000);
+    try {
+        console.log("🚀 Puppeteer Browser Launched");
+        const page = await browser.newPage();
 
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" })
+        await page.setDefaultNavigationTimeout(60000);
 
-    const pdfBuffer = await page.pdf({ 
-        format: "A4",
-        margin: {
-            top: "10mm",
-            bottom: "10mm",
-            left: "10mm",
-            right: "10mm"
-        } 
-    })
+        // networkidle0 is good, but for faster generation, 
+        // sometimes 'domcontentloaded' is enough if you don't have external images
+        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
-    await browser.close()
-    console.log("📄 PDF Buffer created. Sending to client...");
-    return pdfBuffer;
+        const pdfBuffer = await page.pdf({
+            format: "A4",
+            printBackground: true, // Crucial for Tailwind colors/CSS backgrounds
+            margin: {
+                top: "10mm",
+                bottom: "10mm",
+                left: "10mm",
+                right: "10mm"
+            }
+        });
+
+        console.log("📄 PDF Buffer created.");
+        return pdfBuffer;
+    } catch (error) {
+        console.error("❌ PDF Generation Error:", error);
+        throw error;
+    } finally {
+        await browser.close();
+        console.log("🔒 Browser closed.");
+    }
 }
 
 
