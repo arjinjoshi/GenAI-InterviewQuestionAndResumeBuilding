@@ -1,8 +1,7 @@
 const { createGoogleGenerativeAI } = require('@ai-sdk/google');
 const { generateText, Output } = require('ai') ;
 const { z } = require('zod');
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium'); 
+const puppeteer = require("puppeteer"); 
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_GENAI_API_KEY, 
@@ -63,29 +62,17 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 }
 
 async function generatePdfFromHtml(htmlContent){
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    let launchOptions;
-
-        if (isProduction) {
-            launchOptions = {
-                args: puppeteer.defaultArgs({
-                    args: chromium.args,
-                    headless: 'shell'
-                }),
-                defaultViewport: chromium.defaultViewport,
-                executablePath: await chromium.executablePath(),
-                headless: 'shell',
-                ignoreHTTPSErrors: true
-            };
-        } else {
-            launchOptions = {
-                headless: 'shell',  
-                ignoreHTTPSErrors: true
-            };
-        }
-    const browser = await puppeteer.launch(launchOptions);
     
+    const browser = await puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
+        args: [
+          "--no-sandbox", 
+          "--disable-setuid-sandbox",
+          "--single-process",
+          "--no-zygote"
+        ],
+      });
+    console.log(browser);
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" })
 
@@ -96,8 +83,7 @@ async function generatePdfFromHtml(htmlContent){
             bottom: "10mm",
             left: "10mm",
             right: "10mm"
-        },
-        printBackground: true,
+        } 
     })
 
     await browser.close()
