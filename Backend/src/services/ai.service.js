@@ -63,13 +63,12 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 }
 
-
 async function generatePdfFromHtml(htmlContent) {
     let executablePath = null;
-
+    
     if (process.env.NODE_ENV === 'production') {
-        const chromeDir = '/opt/render/project/puppeteer/chrome';
         try {
+            const chromeDir = '/opt/render/project/puppeteer/chrome';
             if (fs.existsSync(chromeDir)) {
                 const folders = fs.readdirSync(chromeDir);
                 const linuxFolder = folders.find(f => f.startsWith('linux-'));
@@ -78,7 +77,7 @@ async function generatePdfFromHtml(htmlContent) {
                 }
             }
         } catch (err) {
-            console.error("Puppeteer path discovery failed:", err.message);
+            console.error("Path discovery failed:", err.message);
         }
     }
 
@@ -95,9 +94,7 @@ async function generatePdfFromHtml(htmlContent) {
 
     try {
         const page = await browser.newPage();
-        
-        // Use a timeout to prevent the server from hanging indefinitely
-        await page.setDefaultNavigationTimeout(60000); 
+        await page.setDefaultNavigationTimeout(60000);
         await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
         const pdfBuffer = await page.pdf({ 
@@ -108,7 +105,7 @@ async function generatePdfFromHtml(htmlContent) {
 
         return pdfBuffer;
     } catch (error) {
-        console.error("PDF Generation Error:", error.message);
+        console.error("PDF Generation failed:", error.message);
         throw error;
     } finally {
         if (browser) await browser.close();
