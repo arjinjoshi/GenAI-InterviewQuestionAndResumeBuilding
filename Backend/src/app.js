@@ -17,6 +17,11 @@ app.use(
 const authRouter = require("./routes/auth.routes");
 const interviewRouter = require("./routes/interview.routes");
 
+/* To check the api is running or not in backend */
+app.get("/",(req,res) =>{
+  res.send("GenAI-InterviewQuestionAndResumeBuilding is up and running")
+})
+
 /* using all the routes here */
 app.use("/api/auth", authRouter);
 app.use("/api/interview", interviewRouter);
