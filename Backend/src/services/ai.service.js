@@ -64,48 +64,41 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 }
 
 async function generatePdfFromHtml(htmlContent) {
-    let executablePath = null;
+    const isProduction = process.env.NODE_ENV === 'production';
     
-    if (process.env.NODE_ENV === 'production') {
-        try {
-            const chromeDir = '/opt/render/project/puppeteer/chrome';
-            if (fs.existsSync(chromeDir)) {
-                const folders = fs.readdirSync(chromeDir);
-                const linuxFolder = folders.find(f => f.startsWith('linux-'));
-                if (linuxFolder) {
-                    executablePath = path.join(chromeDir, linuxFolder, 'chrome-linux64', 'chrome');
-                }
-            }
-        } catch (err) {
-            console.error("Path discovery failed:", err.message);
-        }
-    }
+    const executablePath = isProduction 
+        ? process.env.PUPPETEER_EXECUTABLE_PATH 
+        : null;
 
     const browser = await puppeteer.launch({
-        executablePath: executablePath || null,
+        executablePath,
+        headless: "shell", 
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--single-process",
-            "--no-zygote"
+            "--no-zygote",
+            "--disable-gpu"
         ],
     });
 
     try {
         const page = await browser.newPage();
+        // Set a generous timeout for AI-generated resumes which might have external images
         await page.setDefaultNavigationTimeout(60000);
+        
+        // Use 'networkidle0' to ensure all CSS/Images are loaded before printing
         await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
-        const pdfBuffer = await page.pdf({ 
+        return await page.pdf({ 
             format: "A4", 
             printBackground: true,
-            margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" }
+            margin: { top: "15mm", bottom: "15mm", left: "15mm", right: "15mm" }
         });
 
-        return pdfBuffer;
     } catch (error) {
-        console.error("PDF Generation failed:", error.message);
+        console.error("PDF Generation failed:", error);
         throw error;
     } finally {
         if (browser) await browser.close();
