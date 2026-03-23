@@ -8,7 +8,10 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "https://genai-interviewquestionandresumebuilding-ud66.onrender.com",
+    origin: [
+      "https://genai-interviewquestionandresumebuilding-ud66.onrender.com",
+      "https://gen-ai-interview-question-and-resume.vercel.app",
+  ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"]
